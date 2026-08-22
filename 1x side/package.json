@@ -1,0 +1,12 @@
+{
+  "name": "whatsapp-landing-admin",
+  "version": "1.0.0",
+  "description": "WhatsApp Landing Page with Admin Panel Controller",
+  "scripts": {
+    "dev": "npx -y serve -l 3000",
+    "start": "npx -y serve -l 3000"
+  },
+  "keywords": ["whatsapp", "landing-page", "admin-panel"],
+  "author": "",
+  "license": "ISC"
+}

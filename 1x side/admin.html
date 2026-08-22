@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Landing Page Controller</title>
+  <link rel="icon" href="images/FJbTMJqMap7.svg">
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <!-- ==================== LOGIN OVERLAY ==================== -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h2 class="login-title">Admin Portal Login</h2>
+        <p class="login-subtitle">Control images, links, texts, names & timers</p>
+      </div>
+
+      <div class="login-alert" id="loginAlert"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">
+            <span>Admin Email ID</span>
+            <span class="label-hint">Default: adim@support.com</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            </span>
+            <input type="email" id="loginEmail" class="form-control" placeholder="adim@support.com" required value="adim@support.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">
+            <span>Password</span>
+            <span class="label-hint">Default: admin@123</span>
+          </label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </span>
+            <input type="password" id="loginPassword" class="form-control" placeholder="admin@123" required value="admin@123">
+            <button type="button" class="input-toggle-btn" id="toggleLoginPass" title="Show/Hide Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-muted);">
+            <input type="checkbox" id="rememberMe" checked> Remember me
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+          <span>Sign In to Admin Panel</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN DASHBOARD ==================== -->
+  <div class="admin-app">
+    <!-- Navbar -->
+    <header class="admin-navbar">
+      <div class="nav-brand">
+        <div class="brand-badge">Admin Panel</div>
+        <div class="brand-text">
+          <h1>Site Control Center</h1>
+          <span>Manage Images, Links, Text & Traffic</span>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <div class="save-indicator">
+          <div class="save-dot"></div>
+          <span>Live Sync Active</span>
+        </div>
+
+        <a href="index.html" target="_blank" class="btn btn-secondary btn-sm" title="Open public landing page in new tab">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          <span>View Live Site</span>
+        </a>
+
+        <button type="button" class="btn btn-primary btn-sm" id="saveAllBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span>Save Changes</span>
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-sm" id="logoutBtn" title="Log out of Admin Panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="admin-container">
+      
+      <!-- Sidebar Navigation -->
+      <aside class="admin-sidebar">
+        <div class="nav-section-title">Navigation</div>
+        <ul class="nav-menu">
+          <li>
+            <a href="#overview" class="nav-item active" data-tab="tab-overview">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              <span>Overview & Stats</span>
+            </a>
+          </li>
+          <li>
+            <a href="#branding" class="nav-item" data-tab="tab-branding">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+              <span>Branding & Text</span>
+            </a>
+          </li>
+          <li>
+            <a href="#images" class="nav-item" data-tab="tab-images">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              <span>Images & Media</span>
+            </a>
+          </li>
+          <li>
+            <a href="#whatsapp" class="nav-item" data-tab="tab-whatsapp">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              <span>WhatsApp Link & Msg</span>
+            </a>
+          </li>
+          <li>
+            <a href="#timer" class="nav-item" data-tab="tab-timer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Auto-Redirect Timer</span>
+            </a>
+          </li>
+          <li>
+            <a href="#pixel" class="nav-item" data-tab="tab-pixel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              <span>Pixel & Tracking</span>
+            </a>
+          </li>
+          <li>
+            <a href="#theme" class="nav-item" data-tab="tab-theme">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 10 10 0 0 0 0-20"></path></svg>
+              <span>Theme & Colors</span>
+            </a>
+          </li>
+          <li>
+            <a href="#footer" class="nav-item" data-tab="tab-footer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"></path></svg>
+              <span>Footer Settings</span>
+            </a>
+          </li>
+          <li>
+            <a href="#backup" class="nav-item" data-tab="tab-backup">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Backup & Export</span>
+            </a>
+          </li>
+          <li>
+            <a href="#security" class="nav-item" data-tab="tab-security">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span>Admin Security</span>
+            </a>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- Main Workspace Content Area -->
+      <main class="admin-main">
+        
+        <!-- ==================== TAB 1: OVERVIEW ==================== -->
+        <div class="tab-content active" id="tab-overview">
+          <div class="section-header">
+            <h2>System Overview</h2>
+            <p>Real-time analytics and landing page status.</p>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-icon green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </div>
+              <div>
+                <div class="stat-value" id="statVisits">0</div>
+                <div class="stat-label">Total Site Visitors</div>
+              </div>
+            </div>
+
+            <div class="stat-box">
+              <div class="stat-icon blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+              </div>
+              <div>
+                <div class="stat-value" id="statClicks">0</div>
+                <div class="stat-label">WhatsApp Redirects</div>
+              </div>
+            </div>
+
+            <div class="stat-box">
+              <div class="stat-icon purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              </div>
+              <div style="overflow: hidden;">
+                <div class="stat-value" id="statTargetUrl" style="font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 200px;">https://wa.link/wzmark2</div>
+                <div class="stat-label">Active WhatsApp Link</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              Quick Control Guide
+            </h3>
+            <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+              Welcome to the official administration panel! From here you can update all brand assets, switch WhatsApp numbers/links, edit message bubbles, adjust the redirect countdown, configure Facebook Pixels, and change site colors.
+            </p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline-green" onclick="document.querySelector('[data-tab=\'tab-whatsapp\']').click()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                Change WhatsApp Link
+              </button>
+              <button type="button" class="btn btn-outline-green" onclick="document.querySelector('[data-tab=\'tab-images\']').click()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                Change Avatar Image
+              </button>
+              <button type="button" class="btn btn-secondary" id="resetStatsBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                Reset Stats
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 2: BRANDING & TEXT ==================== -->
+        <div class="tab-content" id="tab-branding">
+          <div class="section-header">
+            <h2>Branding & Profile Texts</h2>
+            <p>Control the profile header, account title, subtitles, and SEO meta.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Profile Identity</h3>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cfgBrandName">Brand / Profile Name</label>
+                <input type="text" id="cfgBrandName" class="form-control" placeholder="e.g. Winzing247">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cfgBrandSubtitle">Profile Subtitle</label>
+                <input type="text" id="cfgBrandSubtitle" class="form-control" placeholder="e.g. WhatsApp Contact Account">
+              </div>
+            </div>
+
+            <div class="toggle-switch-wrapper">
+              <div class="toggle-switch-info">
+                <h4>Show Verified Badge</h4>
+                <p>Display the WhatsApp official verified green badge on the avatar</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfgShowVerifiedBadge">
+                <span class="slider-toggle"></span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgVerifiedBadgeColor">Verified Checkmark Color</label>
+              <input type="color" id="cfgVerifiedBadgeColor" class="color-input" value="#25D366">
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Browser & SEO Meta</h3>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgPageTitle">Website Title (&lt;title&gt;)</label>
+              <input type="text" id="cfgPageTitle" class="form-control" placeholder="Winzing247 - WhatsApp Chat">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgMetaDescription">Meta Description</label>
+              <input type="text" id="cfgMetaDescription" class="form-control" placeholder="Business Account">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgFaviconUrl">Favicon URL or Path</label>
+              <input type="text" id="cfgFaviconUrl" class="form-control" placeholder="images/FJbTMJqMap7.svg">
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 3: IMAGES & MEDIA ==================== -->
+        <div class="tab-content" id="tab-images">
+          <div class="section-header">
+            <h2>Images & Media Manager</h2>
+            <p>Upload your logo, avatar photo, or specify external image URLs.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Profile Avatar Image</h3>
+            
+            <div class="image-upload-wrapper">
+              <div class="avatar-preview-box">
+                <img id="avatarImgPreview" src="images/WIN-Logo.png" alt="Avatar Preview">
+              </div>
+
+              <div class="image-upload-controls">
+                <input type="file" id="avatarFileInput" class="file-input-hidden" accept="image/*">
+                <button type="button" class="btn btn-outline-green btn-sm" id="uploadAvatarBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span>Upload Image From Computer</span>
+                </button>
+                <span style="font-size: 12px; color: var(--text-muted);">Supports PNG, JPG, WebP (Max 2MB)</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgAvatarImage">
+                <span>Or Enter Image URL / Relative Path</span>
+              </label>
+              <input type="text" id="cfgAvatarImage" class="form-control" placeholder="images/WIN-Logo.png or https://example.com/logo.png">
+            </div>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Top Header Logo</h3>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgHeaderLogoType">Header Logo Type</label>
+              <select id="cfgHeaderLogoType" class="form-control">
+                <option value="whatsapp">Official WhatsApp Green Logo (SVG)</option>
+                <option value="custom">Custom Brand Logo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgCustomHeaderLogo">Custom Logo Image URL</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="cfgCustomHeaderLogo" class="form-control" placeholder="https://... or images/logo.png">
+                <input type="file" id="logoFileInput" class="file-input-hidden" accept="image/*">
+                <button type="button" class="btn btn-secondary btn-sm" id="uploadLogoBtn">Upload</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 4: WHATSAPP LINK & MESSAGE ==================== -->
+        <div class="tab-content" id="tab-whatsapp">
+          <div class="section-header">
+            <h2>WhatsApp Redirect & Action Link</h2>
+            <p>Control where users get redirected and what message they send.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Target Redirect Link</h3>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgTargetUrl">
+                <span>Primary WhatsApp Link</span>
+                <span class="label-hint">wa.link, wa.me, or custom URL</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </span>
+                <input type="text" id="cfgTargetUrl" class="form-control" placeholder="https://wa.link/wzmark2">
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-outline-green btn-sm" id="generateWaLinkBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <span>WhatsApp Link Generator (By Phone Number)</span>
+            </button>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Chat Message Bubble & Slider</h3>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgPrefilledLabel">Prefilled Label Text</label>
+              <input type="text" id="cfgPrefilledLabel" class="form-control" placeholder="Prefilled Message">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgPrefilledMessage">Chat Message Bubble Text</label>
+              <input type="text" id="cfgPrefilledMessage" class="form-control" placeholder="I want ID">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgSliderLabel">Slider Button Label</label>
+              <input type="text" id="cfgSliderLabel" class="form-control" placeholder="Start WhatsApp Chat ›">
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 5: AUTO-REDIRECT & TIMER ==================== -->
+        <div class="tab-content" id="tab-timer">
+          <div class="section-header">
+            <h2>Auto-Redirect & Timer Control</h2>
+            <p>Automatically forward visitors to your WhatsApp after a countdown.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="toggle-switch-wrapper">
+              <div class="toggle-switch-info">
+                <h4>Enable Auto-Redirect</h4>
+                <p>Automatically redirect users without requiring them to slide/click</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfgAutoRedirectEnabled">
+                <span class="slider-toggle"></span>
+              </label>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+              <div class="form-label">
+                <span>Redirect Delay Countdown</span>
+                <span id="delayDisplay" style="color: var(--accent-emerald); font-weight: 700;">6s</span>
+              </div>
+              <input type="range" id="cfgAutoRedirectDelay" class="form-control" min="1" max="20" step="1" value="6" style="padding: 0; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                <span>1 sec (Instant)</span>
+                <span>6 sec (Default)</span>
+                <span>20 sec (Extended)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 6: PIXEL & TRACKING ==================== -->
+        <div class="tab-content" id="tab-pixel">
+          <div class="section-header">
+            <h2>Facebook Pixel & Ad Tracking</h2>
+            <p>Configure Meta conversion pixels, custom events, and analytics.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Facebook Pixel Configuration</h3>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgPixelId">Meta / Facebook Pixel ID</label>
+              <input type="text" id="cfgPixelId" class="form-control" placeholder="1740160693928093">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="cfgPixelEvent">Standard Event Name</label>
+                <input type="text" id="cfgPixelEvent" class="form-control" placeholder="Lead">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="cfgCustomPixelEvent">Custom Event Tag</label>
+                <input type="text" id="cfgCustomPixelEvent" class="form-control" placeholder="WZMARK2">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="cfgCustomHeadScript">Custom Tracking Script (&lt;head&gt;)</label>
+              <textarea id="cfgCustomHeadScript" class="form-control" placeholder="<!-- Paste Google Tag Manager, TikTok Pixel or Custom JS here -->"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 7: THEME & APPEARANCE ==================== -->
+        <div class="tab-content" id="tab-theme">
+          <div class="section-header">
+            <h2>Theme & Color Customization</h2>
+            <p>Tailor the visual presentation and brand color scheme.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Color Palette</h3>
+
+            <div class="color-picker-group">
+              <div class="color-item">
+                <input type="color" id="cfgPrimaryColor" class="color-input" value="#25d366">
+                <div class="color-info">
+                  <label>Primary Green</label>
+                  <span>Buttons & Accents</span>
+                </div>
+              </div>
+
+              <div class="color-item">
+                <input type="color" id="cfgDarkGreenColor" class="color-input" value="#008069">
+                <div class="color-info">
+                  <label>Dark Green</label>
+                  <span>Labels & Slider Text</span>
+                </div>
+              </div>
+
+              <div class="color-item">
+                <input type="color" id="cfgTealColor" class="color-input" value="#128c7e">
+                <div class="color-info">
+                  <label>Teal Gradient</label>
+                  <span>Ring border gradient</span>
+                </div>
+              </div>
+
+              <div class="color-item">
+                <input type="color" id="cfgPageBgColor" class="color-input" value="#f0f2f5">
+                <div class="color-info">
+                  <label>Page Background</label>
+                  <span>Light grey or dark</span>
+                </div>
+              </div>
+
+              <div class="color-item">
+                <input type="color" id="cfgCardBgColor" class="color-input" value="#ffffff">
+                <div class="color-info">
+                  <label>Card Background</label>
+                  <span>Profile container</span>
+                </div>
+              </div>
+
+              <div class="color-item">
+                <input type="color" id="cfgTextColor" class="color-input" value="#111b21">
+                <div class="color-info">
+                  <label>Primary Text</label>
+                  <span>Main typography</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 8: FOOTER SETTINGS ==================== -->
+        <div class="tab-content" id="tab-footer">
+          <div class="section-header">
+            <h2>Footer Settings</h2>
+            <p>Customize the bottom disclaimer and copyright message.</p>
+          </div>
+
+          <div class="setting-card">
+            <div class="toggle-switch-wrapper">
+              <div class="toggle-switch-info">
+                <h4>Show Footer Section</h4>
+                <p>Toggle display of bottom links and copyright bar</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfgShowFooter" checked>
+                <span class="slider-toggle"></span>
+              </label>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="cfgFooterCopyright">Copyright Bar Text</label>
+              <input type="text" id="cfgFooterCopyright" class="form-control" placeholder="2025-2026 © WhatsApp LLC">
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 9: BACKUP & EXPORT ==================== -->
+        <div class="tab-content" id="tab-backup">
+          <div class="section-header">
+            <h2>Backup, Export & Site Tools</h2>
+            <p>Export your settings to JSON or download ready-to-deploy configurations.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Configuration Backup</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+              Download a backup JSON file containing all your images, links, texts, and pixel configurations. You can import it later anytime or onto another domain.
+            </p>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline-green" id="exportJsonBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export Backup (JSON)</span>
+              </button>
+
+              <input type="file" id="importJsonInput" class="file-input-hidden" accept=".json">
+              <button type="button" class="btn btn-secondary" id="importJsonBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span>Import Backup (JSON)</span>
+              </button>
+
+              <button type="button" class="btn btn-danger" id="resetBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Reset to Factory Defaults</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 10: ADMIN SECURITY ==================== -->
+        <div class="tab-content" id="tab-security">
+          <div class="section-header">
+            <h2>Admin Security & Credentials</h2>
+            <p>Update your Admin Email ID and Password.</p>
+          </div>
+
+          <div class="setting-card">
+            <h3 class="card-title">Change Admin Login Credentials</h3>
+
+            <form id="changeAuthForm">
+              <div class="form-group">
+                <label class="form-label" for="cfgAdminEmail">Admin Email ID</label>
+                <input type="email" id="cfgAdminEmail" class="form-control" required value="adim@support.com">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="cfgCurrentPass">Current Password</label>
+                  <input type="password" id="cfgCurrentPass" class="form-control" placeholder="Enter current password" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="cfgNewPass">New Password</label>
+                  <input type="password" id="cfgNewPass" class="form-control" placeholder="Enter new password" required>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm">
+                <span>Update Credentials</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- ==================== RIGHT STICKY LIVE PREVIEW ==================== -->
+      <aside class="admin-preview-panel">
+        <div class="preview-card">
+          <div class="preview-header">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              Live Mobile Mockup
+            </h3>
+            <span class="preview-badge">Real-Time Sync</span>
+          </div>
+
+          <!-- Smartphone Mockup Frame -->
+          <div class="phone-mockup">
+            <div class="phone-notch"></div>
+            
+            <div class="phone-screen" id="mockScreen">
+              <!-- Mock Header -->
+              <div class="mockup-header">
+                <svg class="mockup-logo-svg" viewBox="0 0 1487.13 346" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1127.34,188.81l21.43-65.42,21.65,65.42h-43.08ZM1428.25,229.87c-15.56,0-24.36-10.83-24.36-32.93v-5.64c0-20.08,9.25-32.26,25.26-32.26,13.08,0,23.68,9.25,23.68,34.96s-9.7,35.87-24.59,35.87ZM1370.28,297.09h33.38v-55.94c8.12,10.83,20.08,15.79,32.93,15.79,31.13,0,50.53-24.36,50.53-63.84s-16.69-61.13-48.27-61.13c-15.56,0-27.29,5.64-36.09,17.37v-13.76h-32.48v161.51ZM1296.75,229.87c-15.56,0-24.36-10.83-24.36-32.93v-5.64c0-20.08,9.25-32.26,25.26-32.26,13.08,0,23.68,9.25,23.68,34.96s-9.7,35.87-24.59,35.87ZM1238.77,297.09h33.38v-55.94c8.12,10.83,20.08,15.79,32.93,15.79,31.13,0,50.53-24.36,50.53-63.84s-16.69-61.13-48.27-61.13c-15.56,0-27.29,5.64-36.09,17.37v-13.76h-32.48v161.51ZM1070.95,253.32h35.64l11.96-35.64h60.68l11.96,35.64h36.77l-57.52-161.06h-41.73l-57.75,161.06ZM1014.33,256.93c34.06,0,51.43-13.99,51.43-36.99s-10.83-32.48-41.96-37.67l-14.66-2.48c-12.63-2.03-16.47-6.09-16.47-12.63s4.96-11.73,19.17-11.73c13.31,0,18.72,4.96,20.98,17.59h31.13c-1.8-26.84-18.95-41.05-52.11-41.05-30.9,0-50.75,13.31-50.75,36.09s13.31,31.58,43.08,36.54l13.53,2.26c12.41,2.03,15.34,6.54,15.34,13.31,0,7.89-5.19,12.86-19.4,12.86s-22.33-5.41-23.68-17.82h-31.81c1.13,29.32,22.56,41.73,56.17,41.73ZM921.85,256.03c10.38,0,20.98-2.93,27.29-7.22v-25.26c-6.32,3.61-12.41,5.41-18.05,5.41-9.7,0-14.89-4.06-14.89-16.47v-50.75h32.93v-26.17h-32.93v-32.48h-29.78v18.05c0,10.15-2.48,14.44-12.63,14.44h-8.8v26.17h17.82v51.88c0,27.29,10.38,42.41,39.02,42.41ZM796.89,233.47c-10.83,0-16.92-4.74-16.92-13.08,0-9.47,6.99-13.99,23.23-16.69,9.02-1.58,16.02-3.38,21.43-7.22v11.5c0,15.56-11.05,25.49-27.75,25.49ZM788.31,256.93c17.37,0,29.55-7.22,39.02-17.82,1.13,5.64,3.16,10.38,5.86,14.21h31.58c-5.64-8.8-8.12-21.88-8.12-39.25v-37.67c0-27.97-14.89-44.44-50.08-44.44-31.13,0-49.4,12.86-53.01,41.05h30.45c1.8-10.83,8.35-17.14,21.43-17.14,12.18,0,19.17,4.96,19.17,13.53s-5.19,11.5-28.2,14.89c-25.04,3.61-48.05,12.63-48.05,37.9,0,22.56,16.02,34.74,39.93,34.74ZM625.23,253.32h33.38v-69.02c0-8.12,2.03-11.96,6.99-16.92,4.96-4.96,11.5-7.67,18.5-7.67,11.05,0,16.92,6.09,16.92,20.98v72.63h33.38v-78.95c0-27.29-13.53-42.41-39.02-42.41-13.08,0-25.26,4.06-36.77,17.59v-57.29h-33.38v161.06ZM444.09,253.32h36.77l26.62-116.17,27.07,116.17h37.22l42.63-161.06h-36.99l-25.26,118.87-27.07-117.97h-33.38l-27.52,118.42-25.26-119.33h-38.12l43.31,161.06Z"></path>
+                  <path d="M173,0C77.45,0,0,77.45,0,173c0,31.43,8.38,60.91,23.04,86.31L0,346l89.87-21.25c24.67,13.54,53,21.25,83.13,21.25,95.55,0,173-77.45,173-173S268.55,0,173,0ZM173,315.01c-28.91,0-55.81-8.64-78.24-23.48l-53.1,13.52,14.89-50.75c-16.11-23.03-25.56-51.06-25.56-81.3,0-78.43,63.58-142.01,142.01-142.01s142.01,63.58,142.01,142.01-63.58,142.01-142.01,142.01Z"></path>
+                  <path d="M213.54,195.84l41.86,19.73c1.92.91,3.15,2.85,2.98,4.97-.45,5.51-2.66,16.55-12.56,26.44-27.93,27.93-78.09-3.67-80.13-4.89-12.34-6.63-24.06-15.49-35.17-26.61-11.11-11.11-19.98-22.84-26.61-35.17-1.22-2.04-32.82-52.19-4.89-80.13,9.9-9.9,20.93-12.1,26.44-12.56,2.12-.17,4.07,1.06,4.97,2.98l19.73,41.86c.93,1.98.52,4.33-1.02,5.88l-14.71,14.71c-3.18,3.18-4.12,8.13-1.92,12.06,5.37,9.63,12.59,18.9,20.95,27.43,8.53,8.36,17.8,15.58,27.43,20.95,3.93,2.19,8.88,1.26,12.06-1.92l14.71-14.71c1.55-1.55,3.9-1.96,5.88-1.02Z"></path>
+                </svg>
+              </div>
+
+              <!-- Mock Main -->
+              <div class="mockup-main">
+                <div class="mockup-card" id="mockCard">
+                  <div class="mockup-avatar-ring">
+                    <img id="mockAvatar" class="mockup-avatar-img" src="images/WIN-Logo.png" alt="Mock Avatar">
+                    <div class="mockup-badge" id="mockBadge">
+                      <svg id="mockBadgeSvg" viewBox="0 0 24 24" fill="#25D366" width="16" height="16">
+                        <path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.762.459 3.48 1.332 5.001L2 22l5.132-1.347c1.472.802 3.13 1.226 4.876 1.227h.004c5.505 0 9.988-4.478 9.989-9.985 0-2.668-1.038-5.176-2.925-7.062A9.924 9.924 0 0 0 12.012 2zm5.836 14.123c-.246.693-1.428 1.316-1.968 1.4-.49.077-1.129.138-3.284-.755-2.757-1.142-4.529-3.95-4.667-4.133-.137-.183-1.118-1.49-1.118-2.84 0-1.35.704-2.013.955-2.289.252-.275.551-.344.736-.344.183 0 .367.002.527.01.171.008.402-.065.628.48.229.553.78 1.905.849 2.044.069.138.115.3.023.482-.092.183-.138.298-.276.458-.137.16-.29.358-.413.481-.138.138-.282.288-.122.564.16.275.71 1.172 1.523 1.897 1.047.933 1.932 1.223 2.207 1.36.275.138.436.115.596-.069.16-.183.688-.802.871-1.077.183-.275.367-.229.619-.138.252.092 1.59.75 1.865.888.275.138.458.207.527.321.069.115.069.663-.177 1.356z"></path>
+                      </svg>
+                    </div>
+                  </div>
+
+                  <h4 class="mockup-title" id="mockTitle">Winzing247</h4>
+                  <p class="mockup-subtitle" id="mockSubtitle">WhatsApp Contact Account</p>
+
+                  <div class="mockup-bubble-box">
+                    <span class="mockup-bubble-label" id="mockBubbleLabel">Prefilled Message</span>
+                    <div class="mockup-bubble-text" id="mockBubbleText">I want ID</div>
+                  </div>
+
+                  <div class="mockup-slider">
+                    <div class="mockup-slider-thumb" id="mockSliderThumb">›</div>
+                    <div class="mockup-slider-text" id="mockSliderText">Start WhatsApp Chat ›</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="js/site-config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
