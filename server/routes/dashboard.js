@@ -1,14 +1,19 @@
 import express from 'express';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
+import { getContactsFromSupabase, getConversationsFromSupabase } from '../services/supabaseDataService.js';
 
 const router = express.Router();
 router.use(authenticateToken);
 
-router.get('/metrics', (req, res) => {
+router.get('/metrics', async (req, res) => {
   try {
-    // 1. Key Metrics
-    const totalContacts = db.prepare('SELECT COUNT(*) as count FROM contacts').get().count;
+    let totalContacts = db.prepare('SELECT COUNT(*) as count FROM contacts').get()?.count || 0;
+    if (totalContacts === 0) {
+      await getContactsFromSupabase({ limit: 100 });
+      await getConversationsFromSupabase('all');
+      totalContacts = db.prepare('SELECT COUNT(*) as count FROM contacts').get()?.count || 0;
+    }
 
     const newLeadsToday = db.prepare(`
       SELECT COUNT(*) as count FROM contacts 

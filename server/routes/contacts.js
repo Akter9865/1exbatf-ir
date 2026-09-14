@@ -2,12 +2,14 @@ import express from 'express';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { emitContactUpdated } from '../services/socketService.js';
+import { getContactsFromSupabase, saveContactToSupabase } from '../services/supabaseDataService.js';
+import { getSupabase } from '../supabase.js';
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // 1. List / Search Contacts with Multi-Filters & Pagination
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const {
       search = '',
@@ -23,6 +25,23 @@ router.get('/', (req, res) => {
       page = 1,
       limit = 50
     } = req.query;
+
+    // Check live Supabase Cloud Database first (for cross-container persistence on Vercel)
+    const supabaseData = await getContactsFromSupabase({ search, status, stage, page, limit });
+    if (supabaseData && supabaseData.contacts) {
+      const localCount = db.prepare('SELECT COUNT(*) as count FROM contacts').get()?.count || 0;
+      if (supabaseData.contacts.length > 0 || localCount === 0) {
+        return res.json({
+          contacts: supabaseData.contacts,
+          pagination: {
+            total: supabaseData.total,
+            page: supabaseData.page,
+            limit: supabaseData.limit,
+            totalPages: supabaseData.totalPages
+          }
+        });
+      }
+    }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -211,6 +230,7 @@ router.post('/', (req, res) => {
     }
 
     const created = db.prepare('SELECT * FROM contacts WHERE id = ?').get(contactId);
+    saveContactToSupabase(created).catch(() => {});
     res.status(201).json({ contact: created });
   } catch (error) {
     console.error('Create contact error:', error);
@@ -219,7 +239,7 @@ router.post('/', (req, res) => {
 });
 
 // 4. Update Contact
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, phone, email, lead_source, lead_status, pipeline_stage_id, assigned_agent_id, avatar_url } = req.body;
@@ -256,6 +276,9 @@ router.put('/:id', (req, res) => {
     emitContactUpdated(id, { lead_status, pipeline_stage_id, assigned_agent_id });
 
     const updated = db.prepare('SELECT * FROM contacts WHERE id = ?').get(id);
+    if (updated) {
+      saveContactToSupabase(updated).catch(() => {});
+    }
     res.json({ contact: updated });
   } catch (error) {
     console.error('Update contact error:', error);
@@ -264,10 +287,16 @@ router.put('/:id', (req, res) => {
 });
 
 // 5. Delete Contact
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     db.prepare('DELETE FROM contacts WHERE id = ?').run(id);
+
+    const supabase = getSupabase();
+    if (supabase) {
+      await supabase.from('contacts').delete().eq('id', id).catch(() => {});
+    }
+
     res.json({ success: true, message: 'Contact deleted successfully' });
   } catch (error) {
     console.error('Delete contact error:', error);

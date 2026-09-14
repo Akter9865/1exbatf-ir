@@ -2,12 +2,13 @@ import express from 'express';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { emitNewMessage } from '../services/socketService.js';
+import { saveMessageToSupabase } from '../services/supabaseDataService.js';
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // 1. Admin / Agent Sends Message
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { conversationId, text, attachment } = req.body;
 
@@ -62,6 +63,17 @@ router.post('/', (req, res) => {
       SET last_contact_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(conv.contact_id);
+
+    // Save to live Supabase Cloud Database
+    saveMessageToSupabase({
+      id: messageId,
+      conversation_id: conversationId,
+      sender_type: 'agent',
+      sender_id: req.user.id,
+      text: text || '',
+      status: 'delivered',
+      created_at: new Date().toISOString()
+    }, attachment).catch(() => {});
 
     // Fetch full message
     const rawMessage = db.prepare(`

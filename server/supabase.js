@@ -11,9 +11,12 @@ const __dirname = path.dirname(__filename);
 
 let supabaseClient = null;
 
+const DEFAULT_SUPABASE_URL = 'https://duiwbdumovrreansqzpm.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1aXdiZHVtb3ZycmVhbnNxenBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTY1MDgsImV4cCI6MjEwMzc3MjUwOH0.XdaWshSFzpyH1j1b701Tr3e9LMcD5F6koro5iIH3jk0';
+
 export function getSupabaseConfig() {
-  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY;
   return { url, key };
 }
 

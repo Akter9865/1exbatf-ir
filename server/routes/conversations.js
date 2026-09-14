@@ -3,14 +3,30 @@ import db from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { emitConversationStatusChanged } from '../services/socketService.js';
 import { triggerConversationClosedAutomations } from '../services/automationEngine.js';
+import { getConversationsFromSupabase, getMessagesFromSupabase } from '../services/supabaseDataService.js';
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // 1. List Conversations for Admin Inbox
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { status = 'all', unread = 'false', search = '', limit = 100, page = 1 } = req.query;
+
+    // Check live Supabase Cloud Database first for Vercel persistence
+    const sbConvs = await getConversationsFromSupabase(status);
+    if (sbConvs && sbConvs.length > 0) {
+      let filtered = sbConvs;
+      if (search && search.trim()) {
+        const s = search.toLowerCase();
+        filtered = filtered.filter(c => 
+          (c.contact_name && c.contact_name.toLowerCase().includes(s)) ||
+          (c.contact_phone && c.contact_phone.includes(s))
+        );
+      }
+      return res.json({ conversations: filtered });
+    }
+
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     let query = `
@@ -92,7 +108,7 @@ router.get('/', (req, res) => {
 });
 
 // 2. Get Single Conversation with Complete History, Contact Details, and Notes
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -111,11 +127,22 @@ router.get('/:id', (req, res) => {
     `).get(id);
 
     if (!conv) {
+      const sbConvs = await getConversationsFromSupabase('all');
+      const found = sbConvs?.find(c => c.id === id);
+      if (found) {
+        const sbMsgs = await getMessagesFromSupabase(id);
+        return res.json({
+          conversation: found,
+          messages: sbMsgs || [],
+          tags: [],
+          notes: []
+        });
+      }
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
     // Fetch messages
-    const rawMessages = db.prepare(`
+    let rawMessages = db.prepare(`
       SELECT m.*, 
              u.name as agent_name,
              json_group_array(
@@ -136,7 +163,19 @@ router.get('/:id', (req, res) => {
       ORDER BY m.created_at ASC
     `).all(id);
 
-    const messages = rawMessages.map(m => ({
+    if (!rawMessages || rawMessages.length === 0) {
+      const sbMsgs = await getMessagesFromSupabase(id);
+      if (sbMsgs && sbMsgs.length > 0) {
+        return res.json({
+          conversation: conv,
+          messages: sbMsgs,
+          tags: [],
+          notes: []
+        });
+      }
+    }
+
+    const messages = (rawMessages || []).map(m => ({
       ...m,
       attachments: m.attachments ? JSON.parse(m.attachments) : []
     }));

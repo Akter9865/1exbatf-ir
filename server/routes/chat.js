@@ -2,20 +2,31 @@ import express from 'express';
 import db from '../db.js';
 import { emitNewMessage } from '../services/socketService.js';
 import { triggerNewConversationAutomations, triggerKeywordAutomations } from '../services/automationEngine.js';
+import { 
+  saveContactToSupabase, 
+  saveConversationToSupabase, 
+  saveSessionToSupabase, 
+  saveMessageToSupabase, 
+  getVisitorSessionFromSupabase 
+} from '../services/supabaseDataService.js';
 
 const router = express.Router();
 
 // Helper to get all settings as an object
 function getSettings() {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
-  return rows.reduce((acc, r) => {
-    acc[r.key] = r.value;
-    return acc;
-  }, {});
+  try {
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+    return rows.reduce((acc, r) => {
+      acc[r.key] = r.value;
+      return acc;
+    }, {});
+  } catch (e) {
+    return {};
+  }
 }
 
 // 1. Initialize Public Chat
-router.get('/init', (req, res) => {
+router.get('/init', async (req, res) => {
   try {
     const settings = getSettings();
     const sessionToken = req.headers['x-visitor-session'];
@@ -59,6 +70,18 @@ router.get('/init', (req, res) => {
           }
         }
       }
+
+      // If activeSession or conversation is missing from local SQLite (e.g. fresh Vercel serverless instance),
+      // retrieve directly from persistent Supabase Cloud Database!
+      if (!activeSession || !conversation) {
+        const sbData = await getVisitorSessionFromSupabase(sessionToken);
+        if (sbData && sbData.session) {
+          activeSession = sbData.session;
+          contact = sbData.contact;
+          conversation = sbData.conversation;
+          messages = sbData.messages || [];
+        }
+      }
     }
 
     res.json({
@@ -83,7 +106,7 @@ router.get('/init', (req, res) => {
 });
 
 // 2. Submit Lead Capture Form (Name + Phone)
-router.post('/lead-capture', (req, res) => {
+router.post('/lead-capture', async (req, res) => {
   try {
     const { name, phone, leadSource = 'Website' } = req.body;
 
@@ -154,6 +177,19 @@ router.post('/lead-capture', (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `).run(sessionId, sessionToken, contact.id, conversation.id, req.headers['user-agent'] || '');
 
+    // Persist to live Supabase Cloud Database for cross-container / Vercel persistence
+    await Promise.all([
+      saveContactToSupabase(contact),
+      saveConversationToSupabase(conversation),
+      saveSessionToSupabase({
+        id: sessionId,
+        session_token: sessionToken,
+        contact_id: contact.id,
+        conversation_id: conversation.id,
+        user_agent: req.headers['user-agent'] || ''
+      })
+    ]).catch(err => console.warn('Supabase async save error:', err.message));
+
     // If new conversation or new contact, trigger automations (Welcome message)
     if (isNewConv || isNewContact) {
       triggerNewConversationAutomations(conversation.id, contact.id);
@@ -167,7 +203,6 @@ router.post('/lead-capture', (req, res) => {
       WHERE c.id = ?
     `).get(conversation.id);
 
-    const io = db; // socket helper handles this
     res.json({
       sessionToken,
       contact,
@@ -180,7 +215,7 @@ router.post('/lead-capture', (req, res) => {
 });
 
 // 3. Visitor Sends Message
-router.post('/messages', (req, res) => {
+router.post('/messages', async (req, res) => {
   try {
     const { conversationId, text, attachment } = req.body;
     const sessionToken = req.headers['x-visitor-session'];
@@ -189,8 +224,17 @@ router.post('/messages', (req, res) => {
       return res.status(401).json({ error: 'Session required' });
     }
 
-    const session = db.prepare('SELECT * FROM visitor_sessions WHERE session_token = ?').get(sessionToken);
-    if (!session || session.conversation_id !== conversationId) {
+    let session = db.prepare('SELECT * FROM visitor_sessions WHERE session_token = ?').get(sessionToken);
+    
+    // If not found in local db, resolve from Supabase
+    if (!session) {
+      const sbData = await getVisitorSessionFromSupabase(sessionToken);
+      if (sbData && sbData.session) {
+        session = sbData.session;
+      }
+    }
+
+    if (!session || (session.conversation_id && session.conversation_id !== conversationId)) {
       return res.status(403).json({ error: 'Invalid session for this conversation' });
     }
 
@@ -200,7 +244,7 @@ router.post('/messages', (req, res) => {
 
     const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-    // Insert message
+    // Insert message in local db
     db.prepare(`
       INSERT INTO messages (id, conversation_id, sender_type, sender_id, text, status, created_at)
       VALUES (?, ?, 'visitor', ?, ?, 'sent', CURRENT_TIMESTAMP)
@@ -239,6 +283,17 @@ router.post('/messages', (req, res) => {
       SET last_contact_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(session.contact_id);
+
+    // Persist to live Supabase Cloud Database
+    await saveMessageToSupabase({
+      id: messageId,
+      conversation_id: conversationId,
+      sender_type: 'visitor',
+      sender_id: session.contact_id,
+      text: text || '',
+      status: 'sent',
+      created_at: new Date().toISOString()
+    }, attachment).catch(err => console.warn('Supabase saveMessage error:', err.message));
 
     // Fetch full message with attachments
     const rawMessage = db.prepare(`
