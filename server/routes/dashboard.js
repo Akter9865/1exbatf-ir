@@ -8,12 +8,13 @@ router.use(authenticateToken);
 
 router.get('/metrics', async (req, res) => {
   try {
-    let totalContacts = db.prepare('SELECT COUNT(*) as count FROM contacts').get()?.count || 0;
-    if (totalContacts === 0) {
+    // Sync fresh contacts and conversations from Supabase Cloud DB
+    try {
       await getContactsFromSupabase({ limit: 100 });
       await getConversationsFromSupabase('all');
-      totalContacts = db.prepare('SELECT COUNT(*) as count FROM contacts').get()?.count || 0;
-    }
+    } catch (e) {}
+
+    const totalContacts = db.prepare('SELECT COUNT(*) as count FROM contacts').get()?.count || 0;
 
     const newLeadsToday = db.prepare(`
       SELECT COUNT(*) as count FROM contacts 

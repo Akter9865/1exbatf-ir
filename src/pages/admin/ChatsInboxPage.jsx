@@ -152,6 +152,51 @@ export default function ChatsInboxPage() {
     fetchConvDetail();
   }, [selectedConvId, token]);
 
+  // Periodic polling fallback to guarantee real-time sync across serverless instances
+  useEffect(() => {
+    if (!token) return;
+
+    const pollTimer = setInterval(async () => {
+      try {
+        let url = `/api/conversations?status=${statusFilter === 'unread' ? 'all' : statusFilter}`;
+        if (statusFilter === 'unread') url += '&unread=true';
+        if (searchQuery.trim()) url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data?.conversations) {
+          setConversations(data.conversations);
+        }
+
+        // Also refresh messages of currently selected conversation silently
+        if (selectedConvId) {
+          const detailRes = await fetch(`/api/conversations/${selectedConvId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const detailData = await detailRes.json();
+          if (detailData?.messages) {
+            setMessages(prev => {
+              // Check if any new message from visitor arrived
+              if (detailData.messages.length > prev.length) {
+                const latest = detailData.messages[detailData.messages.length - 1];
+                if (latest && latest.sender_type === 'visitor') {
+                  playNotificationChime();
+                }
+              }
+              return detailData.messages;
+            });
+          }
+        }
+      } catch (e) {
+        // Silent poll fail
+      }
+    }, 3500);
+
+    return () => clearInterval(pollTimer);
+  }, [token, selectedConvId, statusFilter, searchQuery]);
+
   // 4. Socket.io Event Listeners
   useEffect(() => {
     if (!socket) return;

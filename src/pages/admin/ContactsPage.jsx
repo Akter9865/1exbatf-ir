@@ -51,8 +51,8 @@ export default function ContactsPage() {
   }, [token]);
 
   // Fetch Contacts with Filters
-  const fetchContacts = async () => {
-    setLoading(true);
+  const fetchContacts = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       let url = `/api/contacts?page=${page}&limit=25`;
       if (search.trim()) url += `&search=${encodeURIComponent(search.trim())}`;
@@ -68,12 +68,16 @@ export default function ContactsPage() {
     } catch (err) {
       console.error('Failed to fetch contacts:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchContacts();
+    fetchContacts(false);
+    const interval = setInterval(() => {
+      fetchContacts(true);
+    }, 6000);
+    return () => clearInterval(interval);
   }, [page, search, statusFilter, stageFilter, token]);
 
   const handleOpenAdd = () => {

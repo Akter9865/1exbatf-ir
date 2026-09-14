@@ -2,7 +2,8 @@ import express from 'express';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { emitNewMessage } from '../services/socketService.js';
-import { saveMessageToSupabase } from '../services/supabaseDataService.js';
+import { saveMessageToSupabase, cacheConversationInLocalDb, cacheContactInLocalDb } from '../services/supabaseDataService.js';
+import { getSupabase } from '../supabase.js';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -20,7 +21,19 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Message text or attachment is required' });
     }
 
-    const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversationId);
+    let conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversationId);
+    if (!conv) {
+      const sb = getSupabase();
+      if (sb) {
+        const { data: sbConv } = await sb.from('conversations').select('*, contacts(*)').eq('id', conversationId).single();
+        if (sbConv) {
+          if (sbConv.contacts) cacheContactInLocalDb(sbConv.contacts);
+          cacheConversationInLocalDb(sbConv);
+          conv = sbConv;
+        }
+      }
+    }
+
     if (!conv) {
       return res.status(404).json({ error: 'Conversation not found' });
     }

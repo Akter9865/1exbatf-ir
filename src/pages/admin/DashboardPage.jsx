@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchDashboard() {
+    async function fetchDashboard(isInitial = false) {
       try {
         const res = await fetch('/api/dashboard/metrics', {
           headers: { Authorization: `Bearer ${token}` }
@@ -24,10 +24,16 @@ export default function DashboardPage() {
       } catch (err) {
         console.error('Failed to load dashboard:', err);
       } finally {
-        setLoading(false);
+        if (isInitial) setLoading(false);
       }
     }
-    fetchDashboard();
+    fetchDashboard(true);
+
+    const interval = setInterval(() => {
+      fetchDashboard(false);
+    }, 6000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   if (loading) {

@@ -383,8 +383,6 @@ export async function getVisitorSessionFromSupabase(sessionToken) {
 
     if (error || !session) return null;
 
-    cacheSessionInLocalDb(session);
-
     // Get contact
     const { data: contact } = await supabase
       .from('contacts')
@@ -402,6 +400,8 @@ export async function getVisitorSessionFromSupabase(sessionToken) {
       .single();
 
     if (conversation) cacheConversationInLocalDb(conversation);
+
+    cacheSessionInLocalDb(session);
 
     // Get messages
     const messages = await getMessagesFromSupabase(session.conversation_id);

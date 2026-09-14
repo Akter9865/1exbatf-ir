@@ -178,17 +178,19 @@ router.post('/lead-capture', async (req, res) => {
     `).run(sessionId, sessionToken, contact.id, conversation.id, req.headers['user-agent'] || '');
 
     // Persist to live Supabase Cloud Database for cross-container / Vercel persistence
-    await Promise.all([
-      saveContactToSupabase(contact),
-      saveConversationToSupabase(conversation),
-      saveSessionToSupabase({
+    try {
+      await saveContactToSupabase(contact);
+      await saveConversationToSupabase(conversation);
+      await saveSessionToSupabase({
         id: sessionId,
         session_token: sessionToken,
         contact_id: contact.id,
         conversation_id: conversation.id,
         user_agent: req.headers['user-agent'] || ''
-      })
-    ]).catch(err => console.warn('Supabase async save error:', err.message));
+      });
+    } catch (err) {
+      console.warn('Supabase sequential save error:', err.message);
+    }
 
     // If new conversation or new contact, trigger automations (Welcome message)
     if (isNewConv || isNewContact) {

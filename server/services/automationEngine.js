@@ -1,5 +1,6 @@
 import db from '../db.js';
 import { emitNewMessage } from './socketService.js';
+import { saveMessageToSupabase } from './supabaseDataService.js';
 
 export function triggerNewConversationAutomations(conversationId, contactId) {
   try {
@@ -90,6 +91,17 @@ function dispatchAutomatedMessage(conversationId, text, botType = 'bot') {
         unread_user_count = unread_user_count + 1
     WHERE id = ?
   `).run(conversationId);
+
+  // Persist automated message to Supabase Cloud Database
+  saveMessageToSupabase({
+    id: messageId,
+    conversation_id: conversationId,
+    sender_type: 'system',
+    sender_id: botType,
+    text: text || '',
+    status: 'delivered',
+    created_at: new Date().toISOString()
+  }).catch(() => {});
 
   const fullMessage = db.prepare(`
     SELECT m.*, NULL as attachments
