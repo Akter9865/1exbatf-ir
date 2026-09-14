@@ -6,15 +6,22 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const baseUploadDir = path.join(__dirname, '..', 'uploads');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+export const baseUploadDir = isVercel 
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'uploads');
 
-// Ensure subdirectories exist
-['images', 'documents', 'audio', 'avatars'].forEach(dir => {
-  const fullPath = path.join(baseUploadDir, dir);
-  if (!fs.existsSync(fullPath)) {
-    fs.mkdirSync(fullPath, { recursive: true });
-  }
-});
+// Ensure subdirectories exist safely
+try {
+  ['images', 'documents', 'audio', 'avatars'].forEach(dir => {
+    const fullPath = path.join(baseUploadDir, dir);
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+    }
+  });
+} catch (e) {
+  console.warn('Warning: Could not create upload directory:', e.message);
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

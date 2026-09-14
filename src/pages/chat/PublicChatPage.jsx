@@ -51,7 +51,7 @@ export default function PublicChatPage() {
     scrollToBottom('auto');
   }, [messages]);
 
-  // 1. Initialize chat session
+  // 1. Initialize visitor chat session & retrieve business branding
   useEffect(() => {
     async function initChat() {
       setLoadingInit(true);
@@ -62,8 +62,7 @@ export default function PublicChatPage() {
           headers['x-visitor-session'] = savedToken;
         }
 
-        const res = await fetch('/api/chat/init', { headers });
-        const data = await res.json();
+        const data = await apiFetch('/api/chat/init', { headers });
 
         if (data.settings) {
           setSettings(data.settings);
@@ -75,8 +74,6 @@ export default function PublicChatPage() {
           setMessages(data.messages || []);
           setShowLeadModal(false);
         } else {
-          // No active session yet: do NOT show lead modal on load!
-          // Show the automated greeting message so visitor sees the active chat box first
           setMessages([
             {
               id: 'welcome_init',
@@ -97,50 +94,84 @@ export default function PublicChatPage() {
     initChat();
   }, []);
 
-  // 2. Setup Socket.io real-time connection
+  // 2. Setup Socket.io real-time connection with polling fallback
   useEffect(() => {
-    const socket = io(window.location.origin, {
-      transports: ['websocket', 'polling']
-    });
-    socketRef.current = socket;
+    const socketBase = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || window.location.origin;
+    let socket = null;
 
-    if (conversation?.id) {
-      socket.emit('join_conversation', conversation.id);
+    try {
+      socket = io(socketBase, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        timeout: 10000
+      });
+      socketRef.current = socket;
+
+      if (conversation?.id) {
+        socket.emit('join_conversation', conversation.id);
+      }
+
+      socket.on('new_message', (data) => {
+        if (data.conversationId === conversation?.id) {
+          setMessages((prev) => {
+            if (prev.some(m => m.id === data.message.id)) return prev;
+            return [...prev, data.message];
+          });
+
+          apiFetch(`/api/chat/mark-read/${conversation.id}`, { method: 'POST' }).catch(() => {});
+        }
+      });
+
+      socket.on('typing_start', (data) => {
+        if (data.senderType === 'agent' && data.conversationId === conversation?.id) {
+          setAgentTyping(true);
+        }
+      });
+
+      socket.on('typing_stop', (data) => {
+        if (data.senderType === 'agent' && data.conversationId === conversation?.id) {
+          setAgentTyping(false);
+        }
+      });
+
+      socket.on('messages_marked_read', (data) => {
+        if (data.readBy === 'admin' && data.conversationId === conversation?.id) {
+          setMessages(prev => prev.map(m => m.sender_type === 'visitor' ? { ...m, status: 'read' } : m));
+        }
+      });
+
+      socket.on('connect_error', () => {
+        // Silently handled - fallback polling will handle synchronization
+      });
+    } catch (e) {
+      console.warn('Socket connection initialization skipped:', e);
     }
 
-    socket.on('new_message', (data) => {
-      if (data.conversationId === conversation?.id) {
-        setMessages((prev) => {
-          // Avoid duplicate by id
-          if (prev.some(m => m.id === data.message.id)) return prev;
-          return [...prev, data.message];
-        });
-
-        // Mark read
-        fetch(`/api/chat/mark-read/${conversation.id}`, { method: 'POST' }).catch(() => {});
+    // Polling fallback every 4s to ensure messages arrive even on serverless platforms (Vercel)
+    const pollInterval = setInterval(async () => {
+      const activeToken = localStorage.getItem('crm_visitor_session');
+      if (conversation?.id && activeToken) {
+        try {
+          const syncData = await apiFetch('/api/chat/init', {
+            headers: { 'x-visitor-session': activeToken }
+          });
+          if (syncData?.messages && syncData.messages.length > 0) {
+            setMessages((prev) => {
+              if (syncData.messages.length !== prev.length) {
+                return syncData.messages;
+              }
+              return prev;
+            });
+          }
+        } catch (pollErr) {
+          // Quiet background poll error
+        }
       }
-    });
-
-    socket.on('typing_start', (data) => {
-      if (data.senderType === 'agent' && data.conversationId === conversation?.id) {
-        setAgentTyping(true);
-      }
-    });
-
-    socket.on('typing_stop', (data) => {
-      if (data.senderType === 'agent' && data.conversationId === conversation?.id) {
-        setAgentTyping(false);
-      }
-    });
-
-    socket.on('messages_marked_read', (data) => {
-      if (data.readBy === 'admin' && data.conversationId === conversation?.id) {
-        setMessages(prev => prev.map(m => m.sender_type === 'visitor' ? { ...m, status: 'read' } : m));
-      }
-    });
+    }, 4000);
 
     return () => {
-      socket.disconnect();
+      clearInterval(pollInterval);
+      if (socket) socket.disconnect();
     };
   }, [conversation?.id]);
 
@@ -168,10 +199,9 @@ export default function PublicChatPage() {
       setMessages(prev => [...prev, optimisticMsg]);
 
       try {
-        const res = await fetch('/api/chat/messages', {
+        const resData = await apiFetch('/api/chat/messages', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'x-visitor-session': data.sessionToken
           },
           body: JSON.stringify({
@@ -179,8 +209,7 @@ export default function PublicChatPage() {
             text: pendingText
           })
         });
-        const resData = await res.json();
-        if (res.ok && resData.message) {
+        if (resData?.message) {
           setMessages(prev => prev.map(m => m.id === tempId ? resData.message : m));
         }
       } catch (err) {
@@ -189,17 +218,15 @@ export default function PublicChatPage() {
     }
 
     // Refresh conversation messages (including welcome message and any auto-replies)
-    setTimeout(() => {
-      fetch(`/api/chat/init`, {
-        headers: { 'x-visitor-session': data.sessionToken }
-      })
-      .then(res => res.json())
-      .then(resData => {
-        if (resData.messages && resData.messages.length > 0) {
+    setTimeout(async () => {
+      try {
+        const resData = await apiFetch('/api/chat/init', {
+          headers: { 'x-visitor-session': data.sessionToken }
+        });
+        if (resData?.messages && resData.messages.length > 0) {
           setMessages(resData.messages);
         }
-      })
-      .catch(() => {});
+      } catch (e) {}
     }, 600);
   };
 
@@ -232,10 +259,9 @@ export default function PublicChatPage() {
     setMessages(prev => [...prev, optimisticMsg]);
 
     try {
-      const res = await fetch('/api/chat/messages', {
+      const data = await apiFetch('/api/chat/messages', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'x-visitor-session': sessionToken
         },
         body: JSON.stringify({
@@ -243,9 +269,6 @@ export default function PublicChatPage() {
           text
         })
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send message');
 
       // Replace optimistic message with actual message
       setMessages(prev => prev.map(m => m.id === tempId ? data.message : m));
@@ -267,19 +290,15 @@ export default function PublicChatPage() {
     formData.append('file', file);
 
     try {
-      const uploadRes = await fetch('/api/upload', {
+      const uploadData = await apiFetch('/api/upload', {
         method: 'POST',
         body: formData
       });
 
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
-
       // Send message with attachment
-      const res = await fetch('/api/chat/messages', {
+      const data = await apiFetch('/api/chat/messages', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'x-visitor-session': sessionToken
         },
         body: JSON.stringify({
@@ -288,9 +307,6 @@ export default function PublicChatPage() {
           attachment: uploadData
         })
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send attachment message');
 
       setMessages(prev => [...prev, data.message]);
     } catch (err) {
@@ -307,10 +323,9 @@ export default function PublicChatPage() {
     if (!uploadData || !conversation) return;
 
     try {
-      const res = await fetch('/api/chat/messages', {
+      const data = await apiFetch('/api/chat/messages', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'x-visitor-session': sessionToken
         },
         body: JSON.stringify({
@@ -320,12 +335,9 @@ export default function PublicChatPage() {
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send voice note');
-
       setMessages(prev => [...prev, data.message]);
     } catch (err) {
-      alert('Failed to send voice note');
+      alert(err.message || 'Failed to send voice note');
     }
   };
 

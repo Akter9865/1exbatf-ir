@@ -45,32 +45,44 @@ export function SocketProvider({ children }) {
   const [incomingAlert, setIncomingAlert] = useState(null);
 
   useEffect(() => {
-    // Connect to same host/port via proxy or direct
-    const s = io(window.location.origin, {
-      transports: ['websocket', 'polling']
-    });
+    const socketBase = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || window.location.origin;
+    let s = null;
 
-    setSocket(s);
+    try {
+      s = io(socketBase, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        timeout: 10000
+      });
 
-    if (isAuthenticated) {
-      s.emit('join_admin_room');
+      setSocket(s);
+
+      if (isAuthenticated) {
+        s.emit('join_admin_room');
+      }
+
+      s.on('new_message', (data) => {
+        // If message is from visitor, play chime and trigger alert
+        if (data.message && data.message.sender_type === 'visitor') {
+          playNotificationChime();
+          setIncomingAlert({
+            title: 'New Customer Message',
+            message: data.message.text || 'Sent an attachment',
+            conversationId: data.conversationId,
+            timestamp: new Date()
+          });
+        }
+      });
+
+      s.on('connect_error', () => {
+        // Quiet socket connection error on serverless environments
+      });
+    } catch (e) {
+      console.warn('Socket provider initialization error:', e);
     }
 
-    s.on('new_message', (data) => {
-      // If message is from visitor, play chime and trigger alert
-      if (data.message && data.message.sender_type === 'visitor') {
-        playNotificationChime();
-        setIncomingAlert({
-          title: 'New Customer Message',
-          message: data.message.text || 'Sent an attachment',
-          conversationId: data.conversationId,
-          timestamp: new Date()
-        });
-      }
-    });
-
     return () => {
-      s.disconnect();
+      if (s) s.disconnect();
     };
   }, [isAuthenticated]);
 

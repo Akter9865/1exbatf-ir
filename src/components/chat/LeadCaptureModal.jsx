@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Phone, MessageSquare, ShieldCheck, ArrowRight, Loader2, X } from 'lucide-react';
+import { apiFetch } from '../../lib/api';
 
 export default function LeadCaptureModal({ agentName, brandName, agentAvatar, onUnlockChat, onClose }) {
   const [name, setName] = useState('');
@@ -24,11 +25,8 @@ export default function LeadCaptureModal({ agentName, brandName, agentAvatar, on
 
     setLoading(true);
     try {
-      const res = await fetch('/api/chat/lead-capture', {
+      const data = await apiFetch('/api/chat/lead-capture', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           name: name.trim(),
           phone: cleanPhone,
@@ -36,15 +34,10 @@ export default function LeadCaptureModal({ agentName, brandName, agentAvatar, on
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to start chat session');
-      }
-
       // Store visitor session in localStorage
       localStorage.setItem('crm_visitor_session', data.sessionToken);
-      localStorage.setItem('crm_visitor_name', data.contact.name);
-      localStorage.setItem('crm_visitor_phone', data.contact.phone);
+      localStorage.setItem('crm_visitor_name', data.contact?.name || name.trim());
+      localStorage.setItem('crm_visitor_phone', data.contact?.phone || cleanPhone);
 
       onUnlockChat(data);
     } catch (err) {

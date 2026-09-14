@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiFetch } from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -17,21 +18,23 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
+        const data = await apiFetch('/api/auth/me', {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
 
-        if (res.ok) {
-          const data = await res.json();
+        if (data?.user) {
           setUser(data.user);
         } else {
-          // Token invalid or expired
           logout();
         }
       } catch (err) {
-        console.error('Auth verification failed:', err);
+        console.warn('Auth verification error:', err.message);
+        // Only log out if it was an explicit 401/403 authorization rejection
+        if (err.status === 401 || err.status === 403) {
+          logout();
+        }
       } finally {
         setLoading(false);
       }
@@ -41,15 +44,13 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const login = async (email, password) => {
-    const res = await fetch('/api/auth/login', {
+    const data = await apiFetch('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Login failed');
+    if (!data?.token) {
+      throw new Error('Authentication response missing session token');
     }
 
     localStorage.setItem('crm_admin_token', data.token);

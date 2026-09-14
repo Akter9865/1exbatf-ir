@@ -7,19 +7,50 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.join(__dirname, 'chat_crm.db');
-const db = new Database(dbPath);
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const targetDir = isVercel ? '/tmp' : __dirname;
+const dbPath = path.join(targetDir, 'chat_crm.db');
 
-// Enable WAL mode for high concurrency and enforce foreign keys
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// If running in serverless environment, copy source database to /tmp if not yet present
+if (isVercel && !fs.existsSync(dbPath)) {
+  const sourceDb = path.join(__dirname, 'chat_crm.db');
+  if (fs.existsSync(sourceDb)) {
+    try {
+      fs.copyFileSync(sourceDb, dbPath);
+    } catch (copyErr) {
+      console.warn('Could not copy initial db to /tmp, will initialize freshly:', copyErr.message);
+    }
+  }
+}
+
+let db;
+try {
+  db = new Database(dbPath);
+  try {
+    db.pragma('journal_mode = WAL');
+  } catch (pragmaErr) {
+    try {
+      db.pragma('journal_mode = DELETE');
+    } catch (e) {}
+  }
+  db.pragma('foreign_keys = ON');
+} catch (dbInitErr) {
+  console.error('Failed to open SQLite database at', dbPath, dbInitErr);
+  throw dbInitErr;
+}
 
 // Initialize database schema
 export function initDB() {
-  const schemaPath = path.join(__dirname, 'schema.sql');
-  const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
-  db.exec(schemaSql);
-  seedInitialData();
+  try {
+    const schemaPath = path.join(__dirname, 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
+      db.exec(schemaSql);
+    }
+    seedInitialData();
+  } catch (err) {
+    console.error('Error during initDB:', err.message);
+  }
   return db;
 }
 
